@@ -1,0 +1,9 @@
+- Implement encoder, decoder (AutoGAN), discriminator models
+- Implement Contrastive Loss with fixed negative sample size (8096 or smaller) (Self-Supervised), https://paperswithcode.com/method/infonce
+- Implement KL Divergence Loss (for Gaussian prior it has closed a form eq.)
+- Implement GAN objective 
+- Implement  Multi scale contrastive learning section 4.2
+- Implement FID score
+- Train&Test scripts
+
+
