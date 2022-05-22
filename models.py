@@ -125,11 +125,12 @@ class Discriminator(nn.Module):
         self.block3 = ResConvBlock(ch_in=hid_ch, ch_out=hid_ch, kernel=3, padding=1, pre_activation=True)
         self.block4 = ResConvBlock(ch_in=hid_ch, ch_out=hid_ch, kernel=3, padding=1, pre_activation=True)
         self.cont_conv = nn.Conv2d(hid_ch, 1, kernel_size=1, padding=1)
-        self.cont_lin = nn.Linear(81, cont_dim)
+        self.cont_lin = nn.Linear(100, cont_dim)
         self.flatten = nn.Flatten()
         self.lin = nn.utils.spectral_norm(nn.Linear(hid_ch, cont_dim))
         self.disc_lin = nn.utils.spectral_norm(nn.Linear(cont_dim, 1))
         self.relu = nn.ReLU()
+        
     def forward(self, x):
         hidden = self.block1(x)
         hidden = self.block2(hidden)
@@ -166,7 +167,7 @@ class Model(nn.Module):
 
     def reparametrize(self, z):
 
-        log_var, mu = z.chunk(2)
+        log_var, mu = z.chunk(2, dim=1)
         eps = MultivariateNormal(torch.zeros_like(mu), torch.eye(mu.size()[1])).sample()
         std = torch.exp(log_var)
         z = eps*std + mu 

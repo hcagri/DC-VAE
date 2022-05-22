@@ -33,13 +33,12 @@ def contrastive_loss(z_latent, x, f_z, expectation = True):
 
     '''
 
-    logvar, mu = z_latent.chunk(2)
-
+    logvar, mu = z_latent.chunk(2, dim=1)
     KLD = 0.5 * torch.sum(logvar.exp() - logvar - 1 + mu.pow(2), dim=1)
-
+    
     distances = h_cossim(x, f_z).exp()
-    positive_samples = torch.diag(distances) # diagonal elements of dist are positive pairs.
-    negative_samples = torch.sum(distances, dim=0) # sum of columns gives the union of positive and negative samples
+    positive_samples = torch.diag(distances)        # diagonal elements of dist are positive pairs.
+    negative_samples = torch.sum(distances, dim=0)  # sum of columns gives the union of positive and negative samples
 
     l_instance = -torch.log(torch.div(positive_samples, negative_samples))
 

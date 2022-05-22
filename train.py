@@ -1,5 +1,4 @@
 import torch 
-import copy 
 from tqdm.auto import tqdm
 from models import Model
 from loss import contrastive_loss
@@ -7,6 +6,8 @@ from torchvision.utils import make_grid
 from torch.utils.data import DataLoader
 import torchvision
 import matplotlib.pyplot as plt
+
+# torch.autograd.set_detect_anomaly(True)
 
 model_params = {
     'decoder': {
@@ -35,6 +36,16 @@ hparams = {
     'device' : 'cuda' if torch.cuda.is_available() else 'cpu'
 }
 
+def weights_init(m):
+    init_type="xavier_uniform"
+    classname = m.__class__.__name__
+    if classname.find('Conv2d') != -1:
+        torch.nn.init.xavier_uniform(m.weight.data, 1.)
+    elif classname.find('BatchNorm2d') != -1:
+        torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
+        torch.nn.init.constant_(m.bias.data, 0.0)
+
+
 
 def show_img(img : torch.tensor, num_images=25, size=(3, 32, 32)):
     '''
@@ -51,6 +62,8 @@ def train(model_params, hparams):
     
     device = hparams['device']
     model = Model(model_params).to(device)
+
+    # model.apply(weights_init)
 
     enc_optim = torch.optim.Adam(model.encoder.parameters(), lr = hparams['lr'])
     dec_optim = torch.optim.Adam(model.decoder.parameters(), lr = hparams['lr'])
@@ -69,7 +82,6 @@ def train(model_params, hparams):
         batch_size=hparams['test_batch_size'], 
         shuffle=False
         )
-
 
     gen_loss_train = []
     disc_loss_train = []
@@ -96,25 +108,27 @@ def train(model_params, hparams):
             real_data = point_batch.to(device) 
 
             #### Fake Data
-            # fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim']))
+            fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim'])).detach()
 
             #### Reconstructed Data
             z_latent, rec_data = model(real_data)
+            rec_data = rec_data
 
             '''----------------         Discriminator Update         ----------------'''
             disc_optim.zero_grad()
+            
 
-            # disc_fake_pred, _ = model.discriminator(fake_data.detach())
-            # disc_fake_loss = gan_criterion(disc_fake_pred, torch.zeros_like(disc_fake_pred))
+            disc_fake_pred, _ = model.discriminator(fake_data)
+            disc_fake_loss = gan_criterion(disc_fake_pred, torch.zeros_like(disc_fake_pred))
 
-            disc_rec_pred, _ = model.discriminator(rec_data.detach())
+            disc_rec_pred, _ = model.discriminator(rec_data)
             disc_rec_loss = gan_criterion(disc_rec_pred, torch.zeros_like(disc_rec_pred))
 
             disc_real_pred, _ = model.discriminator(real_data)
             disc_real_loss = gan_criterion(disc_real_pred, torch.ones_like(disc_real_pred))
 
-            gan_objective = disc_real_loss + disc_rec_loss # + disc_fake_loss 
-            gan_objective.backward()
+            gan_objective = disc_real_loss + disc_rec_loss + disc_fake_loss 
+            gan_objective.backward(retain_graph = True)
             disc_optim.step()
 
             # Log
@@ -127,34 +141,36 @@ def train(model_params, hparams):
             enc_optim.zero_grad()
             dec_optim.zero_grad()
             
-            # fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim'])).to(device)
+            fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim'])).detach()
 
-            # disc_fake_pred, _ = discriminator(fake_data)
-            # gen_fake_loss = gan_criterion(disc_fake_pred, torch.ones_like(disc_fake_pred))
+            disc_fake_pred, _ = model.discriminator(fake_data)
+            gen_fake_loss = gan_criterion(disc_fake_pred, torch.ones_like(disc_fake_pred))
 
             disc_rec_pred, _ = model.discriminator(rec_data)
             gen_rec_loss = gan_criterion(disc_rec_pred, torch.ones_like(disc_rec_pred))
 
-            gan_objective =  gen_rec_loss # + gen_fake_loss 
+            gan_objective =  gen_rec_loss + gen_fake_loss 
 
-            gan_objective.backward()
+            gan_objective.backward(retain_graph = True)
             enc_optim.step()
             dec_optim.step()
 
             # Log
             gen_loss_train.append(gan_objective.item())
             mean_generator_loss += gan_objective.item() / disp_freq
-
+            
             '''----------------         Contrastive Update         ----------------'''
 
             enc_optim.zero_grad()
             dec_optim.zero_grad()
             disc_optim.zero_grad()
 
-            _, rec_contrastive = model.discriminator(rec_data)
-            _, real_contrastive = model.discriminator(real_data)
+            disc_contrative_rec, rec_contrastive = model.discriminator(rec_data)
+            disc_contrative_real, real_contrastive = model.discriminator(real_data)
+
 
             cont_loss = contrastive_loss(z_latent, real_contrastive, rec_contrastive)
+            print("cont_loss, ", cont_loss)
             
             cont_loss.backward()
             disc_optim.step()
@@ -165,7 +181,7 @@ def train(model_params, hparams):
             cont_loss_train.append(cont_loss.item())
             mean_contrastive_loss += cont_loss.item() / disp_freq
             
-
+    
             # Visualize the generated images
             if step % disp_freq == 0:
                 gen_images = model.gen_from_noise(size = (25, model_params['decoder']['latent_dim']))
@@ -177,8 +193,14 @@ def train(model_params, hparams):
             step += 1
 
             iterator.set_postfix_str(
-                f"Disc Loss: {disc_loss_train[-1]:.4f}, Gen Loss: {gen_loss_train[-1]:.4f}, Cont Loss: {cont_loss_train[-1]:.4f}"
+                f"Disc Loss: {disc_loss_train[-1]:.4f}, Gen Loss: {gen_loss_train[-1]:.4f} Cont Loss: {cont_loss_train[-1]:.4f}" # Cont Loss: {cont_loss_train[-1]:.4f}
                 )
 
 
 train(model_params, hparams)
+# model = Model(model_params)
+
+# x = torch.randn((10, 3, 32, 32))
+# a, b = model.discriminator(x)
+# print(a.size())
+# print(b.size())
