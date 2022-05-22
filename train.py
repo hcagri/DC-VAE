@@ -33,7 +33,7 @@ hparams = {
     'train_batch_size' : 10, 
     'test_batch_size' : 10,
     'lr' : 0.01,
-    'device' : 'cuda' if torch.cuda.is_available() else 'cpu'
+    'device' : torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 }
 
 def weights_init(m):
@@ -93,7 +93,7 @@ def train(model_params, hparams):
 
     disp_freq = 500
     step = 1
-
+    
     iterator = tqdm(range(1,hparams['epochs']+1), leave=True)
 
     for epoch in iterator:
@@ -165,12 +165,15 @@ def train(model_params, hparams):
             dec_optim.zero_grad()
             disc_optim.zero_grad()
 
-            disc_contrative_rec, rec_contrastive = model.discriminator(rec_data)
-            disc_contrative_real, real_contrastive = model.discriminator(real_data)
+            z_latent, rec_data = model(real_data)
+            rec_data = rec_data
+
+            _, rec_contrastive = model.discriminator(rec_data)
+            _, real_contrastive = model.discriminator(real_data)
 
 
             cont_loss = contrastive_loss(z_latent, real_contrastive, rec_contrastive)
-            print("cont_loss, ", cont_loss)
+            #print("cont_loss, ", cont_loss)
             
             cont_loss.backward()
             disc_optim.step()
