@@ -88,8 +88,10 @@ def train(model_params, hparams, _run):
         
         iterator = tqdm(train_loader, leave=True)
         iterator.set_description_str(f"Epoch: {epoch}")
-
+        batch_id = 0
         for point_batch, _ in iterator: 
+
+            batch_id += 1
             
             model.train()
             model.device = device
@@ -97,18 +99,15 @@ def train(model_params, hparams, _run):
             #### Real Data
             real_data = point_batch.to(device) 
 
-            #### Fake Data
-            fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim'])).detach()
-
-            #### Reconstructed Data
-            z_latent, rec_data = model(real_data)
-            rec_data = rec_data
 
             '''----------------         Discriminator Update         ----------------'''
             enc_optim.zero_grad()
             dec_optim.zero_grad()
             disc_optim.zero_grad()
             
+
+            fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim'])).detach()
+            z_latent, rec_data = model(real_data)
 
             disc_fake_pred, _ = model.discriminator(fake_data)
             disc_fake_loss = gan_criterion(disc_fake_pred, torch.zeros_like(disc_fake_pred))
@@ -136,7 +135,8 @@ def train(model_params, hparams, _run):
                 enc_optim.zero_grad()
                 dec_optim.zero_grad()
                 
-                fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim'])).detach()
+                fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim']))
+                z_latent, rec_data = model(real_data)
 
                 disc_fake_pred, _ = model.discriminator(fake_data)
                 gen_fake_loss = gan_criterion(disc_fake_pred, torch.ones_like(disc_fake_pred))
@@ -163,11 +163,9 @@ def train(model_params, hparams, _run):
             disc_optim.zero_grad()
 
             z_latent, rec_data = model(real_data)
-            rec_data = rec_data
 
             _, rec_contrastive = model.discriminator(rec_data)
             _, real_contrastive = model.discriminator(real_data)
-
 
             cont_loss = contrastive_loss(z_latent, real_contrastive, rec_contrastive)
 
@@ -199,7 +197,7 @@ def train(model_params, hparams, _run):
                 checkpoint_path = osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, "checkpoints", c_name)
                 torch.save(model.state_dict(), checkpoint_path)
         
-        print("Epoch: {epoch}| mean_discriminator_loss: {mean_discriminator_loss},  mean_generator_loss: {mean_generator_loss},  mean_contrastive_loss: {mean_contrastive_loss}")
+        print(f"Epoch: {epoch}| mean_discriminator_loss: {mean_discriminator_loss/batch_id},  mean_generator_loss: {mean_generator_loss/batch_id},  mean_contrastive_loss: {mean_contrastive_loss/batch_id}")
         mean_contrastive_loss = 0
         mean_generator_loss = 0
         mean_discriminator_loss = 0
