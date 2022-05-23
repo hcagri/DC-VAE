@@ -1,7 +1,6 @@
 import torch
 from torch import nn 
 import torch.nn.functional as F
-from torch.distributions.multivariate_normal import MultivariateNormal
 
 
 class ResConvBlock(nn.Module):
@@ -58,15 +57,6 @@ class ConvBlock(nn.Module):
     def forward(self, x):
         return self.conv(F.relu(x))
 
-def reparametrize(z):
-        log_var, mu = z.chunk(2)
-
-        eps = MultivariateNormal(torch.zeros_like(mu), torch.eye(mu.size()[1])).sample()
-        std = torch.exp(log_var)
-
-        z = eps*std + mu 
-
-        return eps, z
 
 class Decoder(nn.Module):
     def __init__(self, latent_dim, channel_dim):
@@ -134,12 +124,14 @@ class Discriminator(nn.Module):
     def forward(self, x):
         hidden = self.block1(x)
         hidden = self.block2(hidden)
-        cont_hidden = self.flatten(self.cont_conv(hidden))
-        cont_out = self.cont_lin(cont_hidden)
+        cont_hidden = self.flatten(self.relu(self.cont_conv(hidden)))
+        cont_hidden = self.relu(self.cont_lin(cont_hidden))
+        #cont_out= self.cont_lin(cont_hidden)
         hidden = self.block3(hidden)
         hidden = self.relu(self.block4(hidden))
         hidden = hidden.sum(2).sum(2)
         hidden = self.lin(hidden)
+        cont_out = cont_hidden + hidden
         disc_out = self.disc_lin(hidden)
         return disc_out, cont_out
 
@@ -161,17 +153,17 @@ class Model(nn.Module):
         return z_latent, rec
     
     def gen_from_noise(self, size):
-        z_sampled = torch.randn(size)
+        z_sampled = torch.randn(size).to(self.device)
         fake_data = self.decoder(z_sampled)
         return fake_data
 
     def reparametrize(self, z):
 
         log_var, mu = z.chunk(2, dim=1)
-        eps = MultivariateNormal(torch.zeros_like(mu), torch.eye(mu.size()[1])).sample()
+        N = torch.distributions.Normal(0, 1)
+        eps = N.sample(mu.shape).to(self.device)
         std = torch.exp(log_var)
         z = eps*std + mu 
 
         return z
-
 

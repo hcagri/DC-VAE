@@ -19,7 +19,7 @@ def h_cossim(x, y, row_wise = False):
     return num/denum
 
 
-def contrastive_loss(z_latent, x, f_z, expectation = True):
+def contrastive_loss(z_latent, x, f_z, expectation = True, beta = 1e-6):
     ''' L_instance + KL 
 
     Args:
@@ -34,17 +34,18 @@ def contrastive_loss(z_latent, x, f_z, expectation = True):
     '''
 
     logvar, mu = z_latent.chunk(2, dim=1)
-    KLD = 0.5 * torch.sum(logvar.exp() - logvar - 1 + mu.pow(2), dim=1)
+    KLD = (-0.5 * torch.sum(1+logvar-mu.pow(2)-logvar.exp()))*beta
+    # KLD = 0.5 * torch.sum(logvar.exp() - logvar - 1 + mu.pow(2), dim=1)
     
     distances = h_cossim(x, f_z).exp()
     positive_samples = torch.diag(distances)        # diagonal elements of dist are positive pairs.
     negative_samples = torch.sum(distances, dim=0)  # sum of columns gives the union of positive and negative samples
 
-    l_instance = -torch.log(torch.div(positive_samples, negative_samples))
+    l_instance =  -torch.log(torch.div(positive_samples, negative_samples)) # torch.nn.MSELoss()(x, f_z )
 
     if expectation:
         l_instance = torch.mean(l_instance)
-        KLD = KLD.mean()
+        # KLD = KLD.mean()
     
     return l_instance + KLD
 

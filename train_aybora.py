@@ -1,6 +1,6 @@
 import torch 
 from tqdm.auto import tqdm
-from models import Model
+from lib.models import Model
 from loss import contrastive_loss
 from torchvision.utils import make_grid
 from torch.utils.data import DataLoader
@@ -168,6 +168,7 @@ def train(model_params, hparams):
             opt_shared.zero_grad()
             opt_disc_head.zero_grad()
             
+            # Encoder zero grad
 
             disc_fake_pred, _ = model.discriminator(fake_data)
             disc_fake_loss = gan_criterion(disc_fake_pred, torch.zeros_like(disc_fake_pred))
