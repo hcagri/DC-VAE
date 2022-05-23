@@ -18,8 +18,9 @@ ex.add_config(configs)
 def main(_config, _run):
     sacred.commands.print_config(_run)
     
-
     os.makedirs(os.path.join(experiment_dir, _run._id, "checkpoints"))
     os.makedirs(os.path.join(experiment_dir, _run._id, "results"))
     
-    train(_config['model_params'], _config['hparams'], _run)
+    checkpoint = torch.load('checkpoint_7500.pt', map_location = _config['hparams']['device'])
+
+    train(_config['model_params'], _config['hparams'], _run, checkpoint)

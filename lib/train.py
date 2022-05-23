@@ -35,12 +35,15 @@ def show_img(img : torch.tensor,step, num_images=25, size=(3, 32, 32), img_save_
 
 
 
-def train(model_params, hparams, _run):
+def train(model_params, hparams, _run, checkpoint = None):
     
     device = hparams['device']
     model = Model(model_params).to(device)
 
     model.apply(weights_init)
+    
+    if checkpoint is not None:
+        model.load_state_dict(checkpoint)
 
     enc_optim = torch.optim.Adam(model.encoder.parameters(), lr = hparams['lr'])
     dec_optim = torch.optim.Adam(model.decoder.parameters(), lr = hparams['lr'])
@@ -126,7 +129,7 @@ def train(model_params, hparams, _run):
             _run.info["disc_loss_train"].append(gan_objective.item())
             # disc_loss_train.append(gan_objective.item())
             disc_train_loss = gan_objective.item()
-            mean_discriminator_loss += gan_objective.item() / hparams['train_batch_size']
+            mean_discriminator_loss += gan_objective.item() # / hparams['train_batch_size']
 
             '''----------------         Generator Update         ----------------'''
             if step % hparams['gen_train_freq'] == 0:
@@ -154,7 +157,7 @@ def train(model_params, hparams, _run):
                 _run.info["gen_loss_train"].append(gan_objective.item())
                 # gen_loss_train.append(gan_objective.item())
                 gen_train_loss = gan_objective.item()
-                mean_generator_loss += gan_objective.item() /  hparams['train_batch_size']
+                mean_generator_loss += gan_objective.item() # /  hparams['train_batch_size']
             
             '''----------------         Contrastive Update         ----------------'''
 
@@ -179,7 +182,7 @@ def train(model_params, hparams, _run):
             _run.info["cont_loss_train"].append(cont_loss.item())
             # cont_loss_train.append(cont_loss.item())
             cont_train_loss = cont_loss.item()
-            mean_contrastive_loss += cont_loss.item() / hparams['train_batch_size']
+            mean_contrastive_loss += cont_loss.item() # / hparams['train_batch_size']
             
             # Visualize the generated images
             if step % disp_freq == 0:
