@@ -61,12 +61,13 @@ class ConvBlock(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, latent_dim, channel_dim):
         super().__init__()
-
+        
+        self.channel_dim = channel_dim
         self.latent_dim = latent_dim
     
-        self.linear = nn.Linear(latent_dim, 4**2 * latent_dim)
+        self.linear = nn.Linear(latent_dim, 4**2 * channel_dim)
 
-        self.conv1 = ConvBlock(latent_dim, channel_dim)
+        self.conv1 = ConvBlock(channel_dim, channel_dim)
         self.conv2 = ConvBlock(channel_dim, channel_dim)
         self.conv3 = ConvBlock(channel_dim, channel_dim)
         self.conv4 = ConvBlock(channel_dim, channel_dim)
@@ -80,7 +81,7 @@ class Decoder(nn.Module):
 
     def forward(self, x):
         
-        x = self.linear(x).view(-1, self.latent_dim, 4, 4)
+        x = self.linear(x).view(-1, self.channel_dim, 4, 4)
         skip1 = x
 
         x = nn.Upsample(scale_factor=2,mode='nearest')(x)
@@ -167,3 +168,9 @@ class Model(nn.Module):
 
         return z
 
+
+
+
+x = torch.randn(10, 128)
+model = Decoder(128, 256)
+print(model(x).size())
