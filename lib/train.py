@@ -264,7 +264,7 @@ def train(model_params, hparams, _run, checkpoint = None):
                 torch.save(model.state_dict(), checkpoint_path)
         
         if epoch%5 == 0:
-            fid_samp, fid_rec = eval(model, model_params['decoder']['latent_dim'], hparams['test_batch_size'], device)
+            fid_samp, fid_rec = eval(model, model_params['decoder']['latent_dim'], hparams['test_batch_size'], device, test_loader)
             print(f"Epoch: {epoch}| sampling fid: {fid_samp}| reconstruction fid: {fid_rec}")
             _run.info["fid sampling"].append(fid_samp)
             _run.info["fid recon"].append(fid_rec)
