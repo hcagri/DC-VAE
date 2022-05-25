@@ -1,5 +1,6 @@
 from .models import Model
 from .loss import contrastive_loss
+from .val import eval
 
 import torch
 from torchvision.utils import make_grid
