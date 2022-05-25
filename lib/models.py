@@ -50,9 +50,9 @@ class Encoder(nn.Module):
 class ConvBlock(nn.Module):
     ''' Pre-activation Conv Block with no Normalization '''
 
-    def __init__(self, in_channel, out_channels, kernel_size=3, stride=1):
+    def __init__(self, in_channel, out_channels, kernel_size=3, stride=1, padding=1):
         super().__init__()
-        self.conv = nn.Conv2d(in_channel, out_channels,kernel_size=kernel_size, stride=stride, padding=kernel_size//2)
+        self.conv = nn.Conv2d(in_channel, out_channels,kernel_size=kernel_size, stride=stride, padding=padding)
 
     def forward(self, x):
         return self.conv(F.relu(x))
@@ -74,6 +74,11 @@ class Decoder(nn.Module):
         self.conv5 = ConvBlock(channel_dim, channel_dim)
         self.conv6 = ConvBlock(channel_dim, channel_dim)
 
+        self.conv1x1_2 = nn.Conv2d(channel_dim, channel_dim, kernel_size=1)
+        self.conv1x1_3 = nn.Conv2d(channel_dim, channel_dim, kernel_size=1)
+        self.conv1x1_5 = nn.Conv2d(channel_dim, channel_dim, kernel_size=1)
+
+
         self.to_rgb = nn.Sequential(
             ConvBlock(channel_dim, 3),
             nn.Tanh()
@@ -84,24 +89,26 @@ class Decoder(nn.Module):
         x = self.linear(x).view(-1, self.channel_dim, 4, 4)
         skip1 = x
 
+        # Cell 1
         x = nn.Upsample(scale_factor=2,mode='nearest')(x)
         x = self.conv1(x)
         skip2, skip3 = x, x
         x = self.conv2(x)
         x = x + nn.Upsample(scale_factor=2,mode='nearest')(skip1)
 
+        # Cell 2
         skip4 = x
         x = nn.Upsample(scale_factor=2,mode='bilinear')(x)
         x = self.conv3(x)
         skip5 = x 
-        x = x + nn.Upsample(scale_factor=2,mode='bilinear')(skip2)
+        x = x + self.conv1x1_2(nn.Upsample(scale_factor=2,mode='bilinear')(skip2))
         x = self.conv4(x)
         x = x + nn.Upsample(scale_factor=2,mode='bilinear')(skip4)
 
+        # Cell 3
         x = nn.Upsample(scale_factor=2,mode='nearest')(x)
         x = self.conv5(x)
-        x = x + nn.Upsample(scale_factor=4,mode='nearest')(skip3) + nn.Upsample(scale_factor=2,mode='nearest')(skip5)
-
+        x = x + self.conv1x1_3(nn.Upsample(scale_factor=4,mode='nearest')(skip3)) + self.conv1x1_5(nn.Upsample(scale_factor=2,mode='nearest')(skip5))
         x = self.conv6(x)
 
         out = self.to_rgb(x)
@@ -137,7 +144,6 @@ class Discriminator(nn.Module):
         return disc_out, cont_out
 
 
-
 class Model(nn.Module):
     def __init__(self, model_params):
         super().__init__()
@@ -170,7 +176,3 @@ class Model(nn.Module):
 
 
 
-
-x = torch.randn(10, 128)
-model = Decoder(128, 256)
-print(model(x).size())
