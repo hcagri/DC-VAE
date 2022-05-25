@@ -109,6 +109,7 @@ def eval(model, latent_dim, batch, device, loader):
     Path(dir).mkdir(parents=True, exist_ok=True)
 
     for idx, (img, _) in enumerate(loader):
+        img = img.to(device)
         _, img_batch = model(img)
         img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
         for ind, img in enumerate(img_batch):
