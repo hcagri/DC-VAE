@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torchvision
-from inception import InceptionV3
+from .inception import InceptionV3
 from tqdm import tqdm
 import os
 import glob
