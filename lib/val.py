@@ -113,7 +113,7 @@ def eval(model, latent_dim, batch, device, loader):
         _, img_batch = model(img)
         img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
         for ind, img in enumerate(img_batch):
-            imwrite(os.path.join(dir, f'{idx+ind}.png'), img)
+            imwrite(os.path.join(dir, f'{batch*idx+ind}.png'), img)
 
     fid_rec = calculate_fid(cifar_gt_path, dir, device, batch = batch)
     rmtree(dir)

@@ -23,7 +23,7 @@ configs = {
         'hparams' : {
         'epochs' : 800,
         'train_batch_size' : 64, 
-        'test_batch_size' : 64,
+        'test_batch_size' : 100,
         'lr' : 0.0002,
         'disp_freq' : 250,
         'gen_train_freq' : 5,
