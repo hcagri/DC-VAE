@@ -5,11 +5,29 @@ import torch
 from torchvision.utils import make_grid
 from torch.utils.data import DataLoader
 import torchvision
+import torchvision.transforms as transforms
 
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 import os.path as osp
 
+
+
+
+def UnNormalize(tensor, mean = (0.5, 0.5, 0.5), std = (0.5, 0.5, 0.5)):
+
+    if tensor.dim() == 3:
+        for t, m, s in zip(tensor, mean, std):
+            t.mul_(s).add_(m)
+        return tensor
+
+    if tensor.dim() == 4:
+        for idx in range(len(tensor)):
+            ten = tensor[idx, : , :, :]
+            for t, m, s in zip(ten, mean, std):
+                t.mul_(s).add_(m)
+        return tensor
+    
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -26,12 +44,29 @@ def show_img(img : torch.tensor,step, num_images=25, size=(3, 32, 32), img_save_
     Function for visualizing images: Given a tensor of images, number of images, and
     size per image, plots and prints the images in a uniform grid.
     '''
-    image_unflat = img.detach().cpu().view(-1, *size)
+    image_unflat = UnNormalize(img.clone().detach()).cpu().view(-1, *size)
     image_grid = make_grid(image_unflat[:num_images], nrow=5)
     torchvision.utils.save_image(image_grid, f"{img_save_path}/step_{step}.png")
     if show:
         plt.imshow(image_grid.permute(1, 2, 0).squeeze())
         plt.show()
+
+def show_img_rec(img, rec_img ,step, num_images=15, size=(3, 32, 32), img_save_path = 'imgs', show = True):
+    '''
+    Function for visualizing images: Given a tensor of images, number of images, and
+    size per image, plots and prints the images in a uniform grid.
+    '''
+    img_unflat = UnNormalize(img.clone().detach()).cpu().view(-1, *size)
+    rec_img_unflat =UnNormalize(rec_img.clone().detach()).cpu().view(-1, *size)
+    im = torch.cat([img_unflat[:num_images], rec_img_unflat[:num_images]], dim=0)
+
+    image_grid = make_grid(im, nrow = 5) 
+    torchvision.utils.save_image(image_grid, f"{img_save_path}/step_{step}_rec.png")
+
+    if show:
+        plt.imshow(image_grid.permute(1, 2, 0).squeeze())
+        plt.show()
+
 
 
 
@@ -43,6 +78,7 @@ def train(model_params, hparams, _run, checkpoint = None):
     model.apply(weights_init)
     
     if checkpoint is not None:
+        print("Checkpoint is loaded !!!")
         model.load_state_dict(checkpoint)
 
     enc_optim = torch.optim.Adam(model.encoder.parameters(), lr = hparams['lr'])
@@ -52,15 +88,33 @@ def train(model_params, hparams, _run, checkpoint = None):
     gan_criterion = torch.nn.BCEWithLogitsLoss()
 
     train_loader = DataLoader(
-        torchvision.datasets.CIFAR10('./data', train = True, download = True, transform = torchvision.transforms.ToTensor()),
+        torchvision.datasets.CIFAR10(
+            './data', 
+            train = True,
+            download = True, 
+            transform = transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize(
+                                    (0.5, 0.5, 0.5), 
+                                    (0.5, 0.5, 0.5)),
+                           ])
+            ),
         batch_size=hparams['train_batch_size'], 
         shuffle=True, 
         drop_last=True
         )
-
-    test_loader = DataLoader(torchvision.datasets.CIFAR10('./data', train = False, transform = torchvision.transforms.ToTensor()),
+    
+    test_loader = DataLoader(torchvision.datasets.CIFAR10(
+        './data', 
+        train = False, transform = transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize(
+                                    (0.5, 0.5, 0.5), 
+                                    (0.5, 0.5, 0.5)),
+                           ])
+        ),
         batch_size=hparams['test_batch_size'], 
-        shuffle=False
+        shuffle=True
         )
 
     '''
@@ -68,6 +122,7 @@ def train(model_params, hparams, _run, checkpoint = None):
     disc_loss_train = [0]
     cont_loss_train = [0]
     '''
+
     disc_train_loss = 0
     gen_train_loss = 0
     cont_train_loss = 0
@@ -159,35 +214,38 @@ def train(model_params, hparams, _run, checkpoint = None):
                 gen_train_loss = gan_objective.item()
                 mean_generator_loss += gan_objective.item() # /  hparams['train_batch_size']
             
-            '''----------------         Contrastive Update         ----------------'''
+                '''----------------         Contrastive Update         ----------------'''
 
-            enc_optim.zero_grad()
-            dec_optim.zero_grad()
-            disc_optim.zero_grad()
+                enc_optim.zero_grad()
+                dec_optim.zero_grad()
+                disc_optim.zero_grad()
 
-            z_latent, rec_data = model(real_data)
+                z_latent, rec_data = model(real_data)
 
-            _, rec_contrastive = model.discriminator(rec_data)
-            _, real_contrastive = model.discriminator(real_data)
+                _, rec_contrastive = model.discriminator(rec_data)
+                _, real_contrastive = model.discriminator(real_data)
 
-            cont_loss = contrastive_loss(z_latent, real_contrastive, rec_contrastive)
+                cont_loss = contrastive_loss(z_latent, real_contrastive, rec_contrastive)
 
-            cont_loss.backward()
-            
-            disc_optim.step()
-            enc_optim.step()
-            dec_optim.step()
+                cont_loss.backward()
+                
+                disc_optim.step()
+                enc_optim.step()
+                dec_optim.step()
 
-            # Log
-            _run.info["cont_loss_train"].append(cont_loss.item())
-            # cont_loss_train.append(cont_loss.item())
-            cont_train_loss = cont_loss.item()
-            mean_contrastive_loss += cont_loss.item() # / hparams['train_batch_size']
+                # Log
+                _run.info["cont_loss_train"].append(cont_loss.item())
+                # cont_loss_train.append(cont_loss.item())
+                cont_train_loss = cont_loss.item()
+                mean_contrastive_loss += cont_loss.item() # / hparams['train_batch_size']
             
             # Visualize the generated images
             if step % disp_freq == 0:
                 gen_images = model.gen_from_noise(size = (25, model_params['decoder']['latent_dim']))
-                show_img(gen_images,step, num_images=25, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False)
+                t_data, _ = iter(test_loader).next()
+                _ , rec_t_data = model(t_data)
+                show_img(gen_images, step, num_images=25, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False)
+                show_img_rec(t_data, rec_t_data, step, num_images=15, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False)
             
             step += 1
 
