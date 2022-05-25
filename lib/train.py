@@ -193,7 +193,7 @@ def train(model_params, hparams, _run, checkpoint = None):
                 enc_optim.zero_grad()
                 dec_optim.zero_grad()
                 
-                fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim']))
+                fake_data = model.gen_from_noise(size=(2*real_data.size(0), model_params['decoder']['latent_dim']))
                 z_latent, rec_data = model(real_data)
 
                 disc_fake_pred, _ = model.discriminator(fake_data)
@@ -243,6 +243,7 @@ def train(model_params, hparams, _run, checkpoint = None):
             if step % disp_freq == 0:
                 gen_images = model.gen_from_noise(size = (25, model_params['decoder']['latent_dim']))
                 t_data, _ = iter(test_loader).next()
+                t_data = t_data.to(device)
                 _ , rec_t_data = model(t_data)
                 show_img(gen_images, step, num_images=25, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False)
                 show_img_rec(t_data, rec_t_data, step, num_images=15, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False)

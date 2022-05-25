@@ -80,6 +80,7 @@ class Decoder(nn.Module):
 
 
         self.to_rgb = nn.Sequential(
+            nn.BatchNorm2d(channel_dim),
             ConvBlock(channel_dim, 3),
             nn.Tanh()
         )
