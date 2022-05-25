@@ -78,16 +78,16 @@ def train(model_params, hparams, _run, checkpoint = None):
     
     device = hparams['device']
     model = torch.nn.DataParallel(Model(model_params)).to(device)
-
+    
     model.apply(weights_init)
     
     if checkpoint is not None:
         print("Checkpoint is loaded !!!")
         model.load_state_dict(checkpoint)
 
-    enc_optim = torch.optim.Adam(model.encoder.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
-    dec_optim = torch.optim.Adam(model.decoder.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
-    disc_optim = torch.optim.Adam(model.discriminator.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
+    enc_optim = torch.optim.Adam(model.module.encoder.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
+    dec_optim = torch.optim.Adam(model.module.decoder.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
+    disc_optim = torch.optim.Adam(model.module.discriminator.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
 
     gan_criterion = torch.nn.BCEWithLogitsLoss()
 
