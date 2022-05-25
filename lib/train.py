@@ -158,7 +158,7 @@ def train(model_params, hparams, _run, checkpoint = None):
             batch_id += 1
             
             model.train()
-            model.device = device
+            model.module.device = device
 
             #### Real Data
             real_data = point_batch.to(device) 
