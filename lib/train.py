@@ -168,16 +168,16 @@ def train(model_params, hparams, _run, checkpoint = None):
             disc_optim.zero_grad()
             
 
-            fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim']))
+            fake_data = model.module.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim']))
             z_latent, rec_data = model(real_data)
 
-            disc_fake_pred, _ = model.discriminator(fake_data)
+            disc_fake_pred, _ = model.module.discriminator(fake_data)
             disc_fake_loss = gan_criterion(disc_fake_pred, torch.zeros_like(disc_fake_pred))
 
-            disc_rec_pred, _ = model.discriminator(rec_data)
+            disc_rec_pred, _ = model.module.discriminator(rec_data)
             disc_rec_loss = gan_criterion(disc_rec_pred, torch.zeros_like(disc_rec_pred))
 
-            disc_real_pred, _ = model.discriminator(real_data)
+            disc_real_pred, _ = model.module.discriminator(real_data)
             disc_real_loss = gan_criterion(disc_real_pred, torch.ones_like(disc_real_pred))
 
             gan_objective = disc_real_loss + (disc_rec_loss + disc_fake_loss)*0.5 
@@ -197,13 +197,13 @@ def train(model_params, hparams, _run, checkpoint = None):
                 enc_optim.zero_grad()
                 dec_optim.zero_grad()
                 
-                fake_data = model.gen_from_noise(size=(2*real_data.size(0), model_params['decoder']['latent_dim']))
+                fake_data = model.module.gen_from_noise(size=(2*real_data.size(0), model_params['decoder']['latent_dim']))
                 z_latent, rec_data = model(real_data)
 
-                gen_fake_pred, _ = model.discriminator(fake_data)
+                gen_fake_pred, _ = model.module.discriminator(fake_data)
                 gen_fake_loss = gan_criterion(gen_fake_pred, torch.ones_like(gen_fake_pred))
 
-                gen_rec_pred, _ = model.discriminator(rec_data)
+                gen_rec_pred, _ = model.module.discriminator(rec_data)
                 gen_rec_loss = gan_criterion(gen_rec_pred, torch.ones_like(gen_rec_pred))
 
                 gan_objective =  gen_rec_loss + gen_fake_loss 
@@ -226,8 +226,8 @@ def train(model_params, hparams, _run, checkpoint = None):
 
                 z_latent, rec_data = model(real_data)
 
-                _, rec_contrastive = model.discriminator(rec_data)
-                _, real_contrastive = model.discriminator(real_data)
+                _, rec_contrastive = model.module.discriminator(rec_data)
+                _, real_contrastive = model.module.discriminator(real_data)
 
                 cont_loss = contrastive_loss(z_latent, real_contrastive, rec_contrastive)
 
@@ -245,7 +245,7 @@ def train(model_params, hparams, _run, checkpoint = None):
             
             # Visualize the generated images
             if step % disp_freq == 0:
-                gen_images = model.gen_from_noise(size = (25, model_params['decoder']['latent_dim']))
+                gen_images = model.module.gen_from_noise(size = (25, model_params['decoder']['latent_dim']))
                 t_data, _ = iter(test_loader).next()
                 t_data = t_data.to(device)
                 _ , rec_t_data = model(t_data)
