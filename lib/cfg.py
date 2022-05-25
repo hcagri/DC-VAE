@@ -28,6 +28,8 @@ configs = {
         'disp_freq' : 20,
         'gen_train_freq' : 5,
         'checkpoint': 500,
+        'beta1' : 0.0,
+        'beta2' : 0.9,
         'device' : torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     }
 }

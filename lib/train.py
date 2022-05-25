@@ -11,7 +11,10 @@ from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 import os.path as osp
 
-
+torch.cuda.manual_seed(123)
+torch.manual_seed(123)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 
 def UnNormalize(tensor, mean = (0.5, 0.5, 0.5), std = (0.5, 0.5, 0.5)):
@@ -81,9 +84,9 @@ def train(model_params, hparams, _run, checkpoint = None):
         print("Checkpoint is loaded !!!")
         model.load_state_dict(checkpoint)
 
-    enc_optim = torch.optim.Adam(model.encoder.parameters(), lr = hparams['lr'])
-    dec_optim = torch.optim.Adam(model.decoder.parameters(), lr = hparams['lr'])
-    disc_optim = torch.optim.Adam(model.discriminator.parameters(), lr = hparams['lr'])
+    enc_optim = torch.optim.Adam(model.encoder.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
+    dec_optim = torch.optim.Adam(model.decoder.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
+    disc_optim = torch.optim.Adam(model.discriminator.parameters(), lr = hparams['lr'], betas = (hparams['beta1'], hparams['beta2']))
 
     gan_criterion = torch.nn.BCEWithLogitsLoss()
 
@@ -135,6 +138,7 @@ def train(model_params, hparams, _run, checkpoint = None):
     _run.info["gen_loss_train"] = list()
     _run.info["disc_loss_train"] = list()
     _run.info["cont_loss_train"] = list()
+    _run.info["fid"] = list()
     ##########
 
     disp_freq = hparams['disp_freq']
@@ -159,12 +163,10 @@ def train(model_params, hparams, _run, checkpoint = None):
 
 
             '''----------------         Discriminator Update         ----------------'''
-            enc_optim.zero_grad()
-            dec_optim.zero_grad()
             disc_optim.zero_grad()
             
 
-            fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim'])).detach()
+            fake_data = model.gen_from_noise(size=(real_data.size(0), model_params['decoder']['latent_dim']))
             z_latent, rec_data = model(real_data)
 
             disc_fake_pred, _ = model.discriminator(fake_data)
@@ -196,11 +198,11 @@ def train(model_params, hparams, _run, checkpoint = None):
                 fake_data = model.gen_from_noise(size=(2*real_data.size(0), model_params['decoder']['latent_dim']))
                 z_latent, rec_data = model(real_data)
 
-                disc_fake_pred, _ = model.discriminator(fake_data)
-                gen_fake_loss = gan_criterion(disc_fake_pred, torch.ones_like(disc_fake_pred))
+                gen_fake_pred, _ = model.discriminator(fake_data)
+                gen_fake_loss = gan_criterion(gen_fake_pred, torch.ones_like(gen_fake_pred))
 
-                disc_rec_pred, _ = model.discriminator(rec_data)
-                gen_rec_loss = gan_criterion(disc_rec_pred, torch.ones_like(disc_rec_pred))
+                gen_rec_pred, _ = model.discriminator(rec_data)
+                gen_rec_loss = gan_criterion(gen_rec_pred, torch.ones_like(gen_rec_pred))
 
                 gan_objective =  gen_rec_loss + gen_fake_loss 
 
@@ -259,9 +261,8 @@ def train(model_params, hparams, _run, checkpoint = None):
                 checkpoint_path = osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, "checkpoints", c_name)
                 torch.save(model.state_dict(), checkpoint_path)
         
-        print(f"Epoch: {epoch}| mean_discriminator_loss: {mean_discriminator_loss/batch_id},  mean_generator_loss: {mean_generator_loss/batch_id},  mean_contrastive_loss: {mean_contrastive_loss/batch_id}")
-        mean_contrastive_loss = 0
-        mean_generator_loss = 0
-        mean_discriminator_loss = 0
+        fid_samp = eval(model, model_params['decoder']['latent_dim'], hparams['test_batch_size'], device)
+        print(f"Epoch: {epoch}| sampling fid: {fid_samp}")
+        _run.info["fid"].append(fid_samp)
 
 
