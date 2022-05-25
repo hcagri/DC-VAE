@@ -80,7 +80,7 @@ def calculate_fid(path1, path2, device, dim=2048, batch=100):
     
     return calculate_fd(m1,s1,m2,s2)
 
-def eval(model, latent_dim, batch, device):
+def eval(model, latent_dim, batch, device, loader):
     
     dirname = os.path.dirname(__file__)
 
@@ -101,7 +101,21 @@ def eval(model, latent_dim, batch, device):
         for ind, img in enumerate(img_batch):
             imwrite(os.path.join(dir, f'{idx+ind}.png'), img)
 
-    fid = calculate_fid(cifar_gt_path, dir, device, batch = batch)
+    fid_samp = calculate_fid(cifar_gt_path, dir, device, batch = batch)
     rmtree(dir)
-    return fid 
+
+    dir = os.path.join(dirname, f'../tmp/{time.time()}')
+
+    Path(dir).mkdir(parents=True, exist_ok=True)
+
+    for idx, (img, _) in loader:
+        _, img_batch = model(img)
+        img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
+        for ind, img in enumerate(img_batch):
+            imwrite(os.path.join(dir, f'{idx+ind}.png'), img)
+
+    fid_rec = calculate_fid(cifar_gt_path, dir, device, batch = batch)
+    rmtree(dir)
+
+    return fid_samp, fid_rec
 

@@ -77,7 +77,7 @@ def show_img_rec(img, rec_img ,step, num_images=15, size=(3, 32, 32), img_save_p
 def train(model_params, hparams, _run, checkpoint = None):
     
     device = hparams['device']
-    model = Model(model_params).to(device)
+    model = torch.nn.DataParallel(Model(model_params)).to(device)
 
     model.apply(weights_init)
     
@@ -139,7 +139,8 @@ def train(model_params, hparams, _run, checkpoint = None):
     _run.info["gen_loss_train"] = list()
     _run.info["disc_loss_train"] = list()
     _run.info["cont_loss_train"] = list()
-    _run.info["fid"] = list()
+    _run.info["fid sampling"] = list()
+    _run.info["fid recon"] = list()
     ##########
 
     disp_freq = hparams['disp_freq']
@@ -262,8 +263,9 @@ def train(model_params, hparams, _run, checkpoint = None):
                 checkpoint_path = osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, "checkpoints", c_name)
                 torch.save(model.state_dict(), checkpoint_path)
         
-        fid_samp = eval(model, model_params['decoder']['latent_dim'], hparams['test_batch_size'], device)
-        print(f"Epoch: {epoch}| sampling fid: {fid_samp}")
-        _run.info["fid"].append(fid_samp)
-
+        if epoch%5 == 0:
+            fid_samp, fid_rec = eval(model, model_params['decoder']['latent_dim'], hparams['test_batch_size'], device)
+            print(f"Epoch: {epoch}| sampling fid: {fid_samp}| reconstruction fid: {fid_rec}")
+            _run.info["fid sampling"].append(fid_samp)
+            _run.info["fid recon"].append(fid_rec)
 
