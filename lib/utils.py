@@ -28,20 +28,21 @@ def weights_init(m):
 
 
 
-def show_img(img : torch.tensor,step, num_images=25, size=(3, 32, 32), img_save_path = 'imgs', show = True):
+def show_img(img, step = 0, num_images=25, size=(3, 32, 32), img_save_path = None, show = True):
     '''
     Function for visualizing images: Given a tensor of images, number of images, and
     size per image, plots and prints the images in a uniform grid.
     '''
     image_unflat = UnNormalize(img.clone().detach()).cpu().view(-1, *size)
     image_grid = make_grid(image_unflat[:num_images], nrow=5)
-    torchvision.utils.save_image(image_grid, f"{img_save_path}/step_{step}.png")
+    if img_save_path is not None:
+        torchvision.utils.save_image(image_grid, f"{img_save_path}/step_{step}.png")
     if show:
         plt.imshow(image_grid.permute(1, 2, 0).squeeze())
         plt.show()
         
 
-def show_img_rec(img, rec_img ,step, num_images=15, size=(3, 32, 32), img_save_path = 'imgs', show = True):
+def show_img_rec(img, rec_img ,step = 0, num_images=15, size=(3, 32, 32), img_save_path = None, show = True):
     '''
     Function for visualizing images: Given a tensor of images, number of images, and
     size per image, plots and prints the images in a uniform grid.
@@ -51,7 +52,8 @@ def show_img_rec(img, rec_img ,step, num_images=15, size=(3, 32, 32), img_save_p
     im = torch.cat([img_unflat[:num_images], rec_img_unflat[:num_images]], dim=0)
 
     image_grid = make_grid(im, nrow = 5) 
-    torchvision.utils.save_image(image_grid, f"{img_save_path}/step_{step}_rec.png")
+    if img_save_path is not None:
+        torchvision.utils.save_image(image_grid, f"{img_save_path}/step_{step}_rec.png")
 
     if show:
         plt.imshow(image_grid.permute(1, 2, 0).squeeze())
