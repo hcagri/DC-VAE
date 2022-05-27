@@ -26,6 +26,7 @@ configs = {
         'test_batch_size' : 100,
         'lr' : 0.0002,
         'disp_freq' : 250,
+        'fid_freq' : 5,
         'gen_train_freq' : 5,
         'checkpoint': 500,
         'beta1' : 0.0,

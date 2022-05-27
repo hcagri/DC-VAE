@@ -1,82 +1,27 @@
 from .models import Model
 from .loss import contrastive_loss
 from .val import eval
+from .utils import *
 
 import torch
-from torchvision.utils import make_grid
 from torch.utils.data import DataLoader
 import torchvision
 import torchvision.transforms as transforms
 
 from tqdm.auto import tqdm
-import matplotlib.pyplot as plt
 import os.path as osp
-
-torch.cuda.manual_seed(123)
-torch.manual_seed(123)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-
-
-def UnNormalize(tensor, mean = (0.5, 0.5, 0.5), std = (0.5, 0.5, 0.5)):
-
-    if tensor.dim() == 3:
-        for t, m, s in zip(tensor, mean, std):
-            t.mul_(s).add_(m)
-        return tensor
-
-    if tensor.dim() == 4:
-        for idx in range(len(tensor)):
-            ten = tensor[idx, : , :, :]
-            for t, m, s in zip(ten, mean, std):
-                t.mul_(s).add_(m)
-        return tensor
-    
-
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv2d') != -1:
-        torch.nn.init.xavier_uniform(m.weight.data, 1.)
-    elif classname.find('BatchNorm2d') != -1:
-        torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
-        torch.nn.init.constant_(m.bias.data, 0.0)
-
-
-
-def show_img(img : torch.tensor,step, num_images=25, size=(3, 32, 32), img_save_path = 'imgs', show = True):
-    '''
-    Function for visualizing images: Given a tensor of images, number of images, and
-    size per image, plots and prints the images in a uniform grid.
-    '''
-    image_unflat = UnNormalize(img.clone().detach()).cpu().view(-1, *size)
-    image_grid = make_grid(image_unflat[:num_images], nrow=5)
-    torchvision.utils.save_image(image_grid, f"{img_save_path}/step_{step}.png")
-    if show:
-        plt.imshow(image_grid.permute(1, 2, 0).squeeze())
-        plt.show()
-
-def show_img_rec(img, rec_img ,step, num_images=15, size=(3, 32, 32), img_save_path = 'imgs', show = True):
-    '''
-    Function for visualizing images: Given a tensor of images, number of images, and
-    size per image, plots and prints the images in a uniform grid.
-    '''
-    img_unflat = UnNormalize(img.clone().detach()).cpu().view(-1, *size)
-    rec_img_unflat =UnNormalize(rec_img.clone().detach()).cpu().view(-1, *size)
-    im = torch.cat([img_unflat[:num_images], rec_img_unflat[:num_images]], dim=0)
-
-    image_grid = make_grid(im, nrow = 5) 
-    torchvision.utils.save_image(image_grid, f"{img_save_path}/step_{step}_rec.png")
-
-    if show:
-        plt.imshow(image_grid.permute(1, 2, 0).squeeze())
-        plt.show()
-
-
-
 
 def train(model_params, hparams, _run, checkpoint = None):
     
     device = hparams['device']
+
+    torch.manual_seed(123)
+
+    if device.type == "cuda":
+        torch.cuda.manual_seed(123)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
     model = Model(model_params).to(device)
     
     model.apply(weights_init)
@@ -121,12 +66,7 @@ def train(model_params, hparams, _run, checkpoint = None):
         shuffle=True
         )
 
-    '''
-    cont_train_loss = [0]
-    disc_loss_train = [0]
-    cont_loss_train = [0]
-    '''
-
+    ### LOG ###
     disc_train_loss = 0
     gen_train_loss = 0
     cont_train_loss = 0
@@ -135,7 +75,6 @@ def train(model_params, hparams, _run, checkpoint = None):
     mean_discriminator_loss = 0
     mean_contrastive_loss = 0
 
-    ### LOG ###
     _run.info["gen_loss_train"] = list()
     _run.info["disc_loss_train"] = list()
     _run.info["cont_loss_train"] = list()
@@ -146,8 +85,6 @@ def train(model_params, hparams, _run, checkpoint = None):
     disp_freq = hparams['disp_freq']
     step = 1
     
-    # iterator = tqdm(range(1,hparams['epochs']+1), leave=True)
-
     for epoch in range(1,hparams['epochs']+1):
         
         iterator = tqdm(train_loader, leave=True)
@@ -162,7 +99,6 @@ def train(model_params, hparams, _run, checkpoint = None):
 
             #### Real Data
             real_data = point_batch.to(device) 
-
 
             '''----------------         Discriminator Update         ----------------'''
             disc_optim.zero_grad()
@@ -186,9 +122,8 @@ def train(model_params, hparams, _run, checkpoint = None):
 
             # Log
             _run.info["disc_loss_train"].append(gan_objective.item())
-            # disc_loss_train.append(gan_objective.item())
             disc_train_loss = gan_objective.item()
-            mean_discriminator_loss += gan_objective.item() # / hparams['train_batch_size']
+            mean_discriminator_loss += gan_objective.item() 
 
             '''----------------         Generator Update         ----------------'''
             if step % hparams['gen_train_freq'] == 0:
@@ -214,9 +149,8 @@ def train(model_params, hparams, _run, checkpoint = None):
 
                 # Log
                 _run.info["gen_loss_train"].append(gan_objective.item())
-                # gen_loss_train.append(gan_objective.item())
                 gen_train_loss = gan_objective.item()
-                mean_generator_loss += gan_objective.item() # /  hparams['train_batch_size']
+                mean_generator_loss += gan_objective.item() 
             
                 '''----------------         Contrastive Update         ----------------'''
 
@@ -239,9 +173,8 @@ def train(model_params, hparams, _run, checkpoint = None):
 
                 # Log
                 _run.info["cont_loss_train"].append(cont_loss.item())
-                # cont_loss_train.append(cont_loss.item())
                 cont_train_loss = cont_loss.item()
-                mean_contrastive_loss += cont_loss.item() # / hparams['train_batch_size']
+                mean_contrastive_loss += cont_loss.item() 
             
             # Visualize the generated images
             if step % disp_freq == 0:
@@ -263,7 +196,7 @@ def train(model_params, hparams, _run, checkpoint = None):
                 checkpoint_path = osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, "checkpoints", c_name)
                 torch.save(model.state_dict(), checkpoint_path)
         
-        if epoch%5 == 0:
+        if epoch % hparams['fid_freq'] == 0:
             fid_samp, fid_rec = eval(model, model_params['decoder']['latent_dim'], hparams['test_batch_size'], device, test_loader)
             print(f"Epoch: {epoch}| sampling fid: {fid_samp}| reconstruction fid: {fid_rec}")
             _run.info["fid sampling"].append(fid_samp)
