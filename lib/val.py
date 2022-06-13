@@ -88,7 +88,7 @@ def eval(model, latent_dim, batch, device, loader):
 
     Path(dir).mkdir(parents=True, exist_ok=True)
 
-    cifar_gt_path = os.path.join(dirname, '../fid_stats_cifar10_train.npz')
+    cifar_gt_path = os.path.join(dirname, '../fid_stats_cifar_test.npz')
 
     sample_num = 10000
 
