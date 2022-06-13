@@ -90,7 +90,7 @@ def eval(model, latent_dim, batch, device, loader):
 
     cifar_gt_path = os.path.join(dirname, '../fid_stats_cifar_test.npz')
 
-    sample_num = 50000
+    sample_num = 10000
 
     for idx in range(0, sample_num, batch):
         
