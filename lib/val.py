@@ -9,7 +9,7 @@ import time
 from PIL import Image
 from scipy.linalg import sqrtm
 from pathlib import Path
-from cv2 import imwrite
+import cv2
 from shutil import rmtree
 
 class PathData(torch.utils.data.Dataset):
@@ -99,7 +99,7 @@ def eval(model, latent_dim, batch, device, loader):
         img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
 
         for ind, img in enumerate(img_batch):
-            imwrite(os.path.join(dir, f'{idx+ind}.png'), img)
+            cv2.imwrite(os.path.join(dir, f'{idx+ind}.png'), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
     fid_samp = calculate_fid(cifar_gt_path, dir, device, batch = batch)
     rmtree(dir)
@@ -113,7 +113,7 @@ def eval(model, latent_dim, batch, device, loader):
         _, img_batch = model(img)
         img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
         for ind, img in enumerate(img_batch):
-            imwrite(os.path.join(dir, f'{batch*idx+ind}.png'), img)
+            cv2.imwrite(os.path.join(dir, f'{batch*idx+ind}.png'), img)
 
     fid_rec = calculate_fid(cifar_gt_path, dir, device, batch = batch)
     rmtree(dir)
