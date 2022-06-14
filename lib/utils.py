@@ -28,7 +28,7 @@ def weights_init(m):
 
 
 
-def show_img(img, step = 0, num_images=25, size=(3, 32, 32), img_save_path = None, show = True):
+def show_img(img, step = 0, num_images=25, size=(3, 32, 32), img_save_path = None, show = True, wandb_save=True):
     '''
     Function for visualizing images: Given a tensor of images, number of images, and
     size per image, plots and prints the images in a uniform grid.
@@ -40,9 +40,12 @@ def show_img(img, step = 0, num_images=25, size=(3, 32, 32), img_save_path = Non
     if show:
         plt.imshow(image_grid.permute(1, 2, 0).squeeze())
         plt.show()
+    if wandb_save:
+        images = wandb.Image(image_grid)
+        wandb.log({"sampling examples": images})    
         
 
-def show_img_rec(img, rec_img ,step = 0, num_images=15, size=(3, 32, 32), img_save_path = None, show = True):
+def show_img_rec(img, rec_img ,step = 0, num_images=15, size=(3, 32, 32), img_save_path = None, show = True, wandb_save = True):
     '''
     Function for visualizing images: Given a tensor of images, number of images, and
     size per image, plots and prints the images in a uniform grid.
@@ -58,5 +61,9 @@ def show_img_rec(img, rec_img ,step = 0, num_images=15, size=(3, 32, 32), img_sa
     if show:
         plt.imshow(image_grid.permute(1, 2, 0).squeeze())
         plt.show()
+
+    if wandb_save:
+        images = wandb.Image(image_grid)
+        wandb.log({"sampling examples": images})  
 
 

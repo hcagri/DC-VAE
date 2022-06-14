@@ -30,7 +30,6 @@ def train(model_params, hparams, _run, checkpoint = None):
     configs = {'model_params': model_params, 'hparams': hparams}
     
     wandb.init(project="dcvae", entity="aybora", config = configs)
-    wandb.watch(model, log="all", log_freq=1)
 
     if checkpoint is not None:
         print("Checkpoint is loaded !!!")
@@ -194,8 +193,8 @@ def train(model_params, hparams, _run, checkpoint = None):
                 t_data, _ = iter(test_loader).next()
                 t_data = t_data.to(device)
                 _ , rec_t_data = model(t_data)
-                show_img(gen_images, step, num_images=25, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False)
-                show_img_rec(t_data, rec_t_data, step, num_images=15, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False)
+                show_img(gen_images, step, num_images=25, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False, wandb_save = True)
+                show_img_rec(t_data, rec_t_data, step, num_images=15, size=(3, 32, 32), img_save_path=osp.join(_run.experiment_info['base_dir'], 'runs', _run._id, 'results'), show=False, wandb_save = True)
             
             step += 1
 
