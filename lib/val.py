@@ -88,7 +88,7 @@ def eval(model, latent_dim, batch, device, loader):
 
     Path(dir).mkdir(parents=True, exist_ok=True)
 
-    cifar_gt_path = os.path.join(dirname, '../fid_stats_cifar_test.npz')
+    cifar_gt_path = os.path.join(dirname, '../fid_stats_cifar10_train.npz')
 
     sample_num = 10000
 
@@ -96,9 +96,11 @@ def eval(model, latent_dim, batch, device, loader):
         
         img_batch = model.gen_from_noise(size = (batch, latent_dim))
 
-        img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
+        #img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
+        img_o = img_batch.mul_(127.5).add_(127.5).clamp(0.0,255.0)
+        img_o = img_o.permute(0,2,3,1).to("cpu",torch.uint8).numpy()
 
-        for ind, img in enumerate(img_batch):
+        for ind, img in enumerate(tqdm(img_o)):
             cv2.imwrite(os.path.join(dir, f'{idx+ind}.png'), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
     fid_samp = calculate_fid(cifar_gt_path, dir, device, batch = batch)
@@ -111,8 +113,12 @@ def eval(model, latent_dim, batch, device, loader):
     for idx, (img, _) in enumerate(loader):
         img = img.to(device)
         _, img_batch = model(img)
-        img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
-        for ind, img in enumerate(img_batch):
+
+        #img_batch = (img_batch.permute(0,2,3,1).detach().cpu().numpy() * 127.5 + 127.5).astype(np.uint8)
+        img_o = img_batch.mul_(127.5).add_(127.5).clamp(0.0,255.0)
+        img_o = img_o.permute(0,2,3,1).to("cpu",torch.uint8).numpy()
+
+        for ind, img in enumerate(tqdm(img_o)):
             cv2.imwrite(os.path.join(dir, f'{batch*idx+ind}.png'), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
     fid_rec = calculate_fid(cifar_gt_path, dir, device, batch = batch)
