@@ -31,6 +31,14 @@ def train(model_params, hparams, _run, checkpoint = None):
     
     wandb.init(project="dcvae", entity="aybora", config = configs)
 
+    wandb.define_metric("step")
+    wandb.define_metric("epoch")
+    wandb.define_metric("gen_loss_train", step_metric="step")
+    wandb.define_metric("disc_loss_train", step_metric="step")
+    wandb.define_metric("cont_loss_train", step_metric="step")
+    wandb.define_metric("fid_samp", step_metric="epoch")
+    wandb.define_metric("fid_recon", step_metric="epoch")
+
     if checkpoint is not None:
         print("Checkpoint is loaded !!!")
         model.load_state_dict(checkpoint)
@@ -128,7 +136,7 @@ def train(model_params, hparams, _run, checkpoint = None):
             # Log
             _run.info["disc_loss_train"].append(gan_objective.item())
             if step % 10 == 0:
-                wandb.log({"disc_loss_train": gan_objective.item()})
+                wandb.log({"disc_loss_train": gan_objective.item(), "step": step})
             disc_train_loss = gan_objective.item()
             mean_discriminator_loss += gan_objective.item() 
 
@@ -157,7 +165,7 @@ def train(model_params, hparams, _run, checkpoint = None):
                 # Log
                 _run.info["gen_loss_train"].append(gan_objective.item())
                 if step % 10 == 0:
-                    wandb.log({"gen_loss_train": gan_objective.item()})
+                    wandb.log({"gen_loss_train": gan_objective.item(), "step": step})
                 gen_train_loss = gan_objective.item()
                 mean_generator_loss += gan_objective.item() 
             
@@ -183,7 +191,7 @@ def train(model_params, hparams, _run, checkpoint = None):
                 # Log
                 _run.info["cont_loss_train"].append(cont_loss.item())
                 if step % 10 == 0:
-                    wandb.log({"cont_loss_train": cont_loss.item()})
+                    wandb.log({"cont_loss_train": cont_loss.item(), "step": step})
                 cont_train_loss = cont_loss.item()
                 mean_contrastive_loss += cont_loss.item() 
             
@@ -212,6 +220,6 @@ def train(model_params, hparams, _run, checkpoint = None):
             print(f"Epoch: {epoch}| sampling fid: {fid_samp}| reconstruction fid: {fid_rec}")
             _run.info["fid sampling"].append(fid_samp.item())
             _run.info["fid recon"].append(fid_rec.item())
-            wandb.log({"fid_samp": fid_samp.item()})
-            wandb.log({"fid_recon": fid_rec.item()})
+            wandb.log({"fid_samp": fid_samp.item(), "epoch": epoch})
+            wandb.log({"fid_recon": fid_rec.item(), "epoch": epoch})
 

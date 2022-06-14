@@ -41,7 +41,8 @@ def show_img(img, step = 0, num_images=25, size=(3, 32, 32), img_save_path = Non
         plt.imshow(image_grid.permute(1, 2, 0).squeeze())
         plt.show()
     if wandb_save:
-        images = wandb.Image(image_grid)
+        import wandb
+        images = wandb.Image(image_grid, caption = f"sampling of checkpoint {step}")
         wandb.log({"sampling examples": images})    
         
 
@@ -63,7 +64,8 @@ def show_img_rec(img, rec_img ,step = 0, num_images=15, size=(3, 32, 32), img_sa
         plt.show()
 
     if wandb_save:
-        images = wandb.Image(image_grid)
-        wandb.log({"sampling examples": images})  
+        import wandb
+        images = wandb.Image(image_grid, caption = f"recon of checkpoint {step}")
+        wandb.log({"recon examples": images})  
 
 
