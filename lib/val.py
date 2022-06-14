@@ -92,7 +92,7 @@ def eval(model, latent_dim, batch, device, loader):
 
     sample_num = 10000
 
-    for idx in range(0, sample_num, batch):
+    for idx in tqdm(range(0, sample_num, batch)):
         
         img_batch = model.gen_from_noise(size = (batch, latent_dim))
 
@@ -100,7 +100,7 @@ def eval(model, latent_dim, batch, device, loader):
         img_o = img_batch.mul_(127.5).add_(127.5).clamp(0.0,255.0)
         img_o = img_o.permute(0,2,3,1).to("cpu",torch.uint8).numpy()
 
-        for ind, img in enumerate(tqdm(img_o)):
+        for ind, img in enumerate(img_o):
             cv2.imwrite(os.path.join(dir, f'{idx+ind}.png'), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
     fid_samp = calculate_fid(cifar_gt_path, dir, device, batch = batch)
@@ -110,7 +110,7 @@ def eval(model, latent_dim, batch, device, loader):
 
     Path(dir).mkdir(parents=True, exist_ok=True)
 
-    for idx, (img, _) in enumerate(loader):
+    for idx, (img, _) in enumerate(tqdm(loader)):
         img = img.to(device)
         _, img_batch = model(img)
 
@@ -118,7 +118,7 @@ def eval(model, latent_dim, batch, device, loader):
         img_o = img_batch.mul_(127.5).add_(127.5).clamp(0.0,255.0)
         img_o = img_o.permute(0,2,3,1).to("cpu",torch.uint8).numpy()
 
-        for ind, img in enumerate(tqdm(img_o)):
+        for ind, img in enumerate(img_o):
             cv2.imwrite(os.path.join(dir, f'{batch*idx+ind}.png'), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
     fid_rec = calculate_fid(cifar_gt_path, dir, device, batch = batch)

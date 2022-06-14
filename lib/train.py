@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 
 from tqdm.auto import tqdm
 import os.path as osp
+import wandb
 
 def train(model_params, hparams, _run, checkpoint = None):
     
@@ -25,7 +26,12 @@ def train(model_params, hparams, _run, checkpoint = None):
     model = Model(model_params).to(device)
     
     model.apply(weights_init)
+
+    configs = {'model_params': model_params, 'hparams': hparams}
     
+    wandb.init(project="dcvae", entity="aybora", config = configs)
+    wandb.watch(model, log="all", log_freq=1)
+
     if checkpoint is not None:
         print("Checkpoint is loaded !!!")
         model.load_state_dict(checkpoint)
@@ -122,6 +128,8 @@ def train(model_params, hparams, _run, checkpoint = None):
 
             # Log
             _run.info["disc_loss_train"].append(gan_objective.item())
+            if step % 10 == 0:
+                wandb.log({"disc_loss_train": gan_objective.item()})
             disc_train_loss = gan_objective.item()
             mean_discriminator_loss += gan_objective.item() 
 
@@ -149,6 +157,8 @@ def train(model_params, hparams, _run, checkpoint = None):
 
                 # Log
                 _run.info["gen_loss_train"].append(gan_objective.item())
+                if step % 10 == 0:
+                    wandb.log({"gen_loss_train": gan_objective.item()})
                 gen_train_loss = gan_objective.item()
                 mean_generator_loss += gan_objective.item() 
             
@@ -173,6 +183,8 @@ def train(model_params, hparams, _run, checkpoint = None):
 
                 # Log
                 _run.info["cont_loss_train"].append(cont_loss.item())
+                if step % 10 == 0:
+                    wandb.log({"cont_loss_train": cont_loss.item()})
                 cont_train_loss = cont_loss.item()
                 mean_contrastive_loss += cont_loss.item() 
             
@@ -199,6 +211,8 @@ def train(model_params, hparams, _run, checkpoint = None):
         if epoch % hparams['fid_freq'] == 0:
             fid_samp, fid_rec = eval(model, model_params['decoder']['latent_dim'], hparams['test_batch_size'], device, test_loader)
             print(f"Epoch: {epoch}| sampling fid: {fid_samp}| reconstruction fid: {fid_rec}")
-            _run.info["fid sampling"].append(fid_samp)
-            _run.info["fid recon"].append(fid_rec)
+            _run.info["fid sampling"].append(fid_samp.item())
+            _run.info["fid recon"].append(fid_rec.item())
+            wandb.log({"fid_samp": fid_samp.item()})
+            wandb.log({"fid_recon": fid_rec.item()})
 
