@@ -63,7 +63,7 @@ def train(model_params, hparams, _run, checkpoint = None):
             ),
         batch_size=hparams['train_batch_size'], 
         shuffle=True, 
-        pin_memory=True
+        pin_memory=True,
         drop_last=True
         )
     
