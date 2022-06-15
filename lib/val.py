@@ -31,7 +31,7 @@ def calculate_mu_sigma(path, model, device, batch, dim):
 
         data = sorted(glob.glob(os.path.join(path,'*.png')))
         dataset = PathData(data)
-        generator = torch.utils.data.DataLoader(dataset, batch_size=batch, shuffle=False, num_workers=6)
+        generator = torch.utils.data.DataLoader(dataset, batch_size=batch, shuffle=False, pin_memory=True, drop_last=True)
 
         outs = []
         model.eval()
