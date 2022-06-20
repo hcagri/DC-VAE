@@ -4,7 +4,7 @@ Gaurav Parmar, Dacheng Li, Kwonjoon Lee, Zhuowen Tu
 
 *CVPR 2021*
 
-<p align="center"><img src="figures/Sampling.png" alt="Model" style="height: 300px; width:300px;"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/hcagri/Dual-Contradistinctive-Generative-Autoencoder/master/figures/Sampling.png" alt="Model" style="height: 300px; width:300px;"/></p>
 <p align="center">Figure: Sampling Results of Re-implementation.</p>
 
 
