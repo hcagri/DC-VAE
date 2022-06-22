@@ -20,7 +20,7 @@ configs = {
         }
     },
 
-        'hparams' : {
+    'hparams' : {
         'epochs' : 800,
         'train_batch_size' : 128, 
         'test_batch_size' : 128,
